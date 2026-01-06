@@ -1,7 +1,7 @@
-FROM debian:bullseye
+FROM debian:trixie
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates wget gnupg2 gosu tini\
+	&& apt-get install -y --no-install-recommends ca-certificates curl gnupg2 gosu tini\
 	&& rm -rf /var/lib/apt/lists/* \
     # verify that the binary works
     && gosu nobody true
@@ -17,8 +17,9 @@ RUN apt-get update \
 #   python: Needed to run barman
 #   rsync: Needed to rsync basebackups from the database servers
 #   gettext-base: envsubst
-RUN bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" >> /etc/apt/sources.list.d/pgdg.list' \
-	&& (wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -) \
+RUN install -d /usr/share/postgresql-common/pgdg \
+    && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' > /etc/apt/sources.list.d/pgdg.list" \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		cron \
@@ -35,9 +36,9 @@ RUN bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg ma
 		postgresql-client-14 \
 		postgresql-client-15 \
   		postgresql-client-16 \
-    		postgresql-client-17 \
+    	postgresql-client-17 \
+		postgresql-client-18 \
 		python3 \
-        python3-distutils \
 		rsync \
         gettext-base \
         procps \
@@ -48,7 +49,7 @@ RUN bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg ma
 
 # Set up some defaults for file/directory locations used in entrypoint.sh.
 ENV \
-	BARMAN_VERSION=3.4.1 \
+	BARMAN_VERSION=3.16.2 \
 	BARMAN_CRON_SRC=/private/cron.d \
 	BARMAN_DATA_DIR=/var/lib/barman \
 	BARMAN_LOG_DIR=/var/log/barman \
@@ -77,7 +78,7 @@ COPY barman.conf.template /etc/barman.conf.template
 COPY pg.conf.template /etc/barman/barman.d/pg.conf.template
 
 # Install barman exporter
-RUN pip install barman-exporter && mkdir /node_exporter
+RUN pip install barman-exporter --break-system-packages && mkdir /node_exporter
 VOLUME /node_exporter
 
 # Install the entrypoint script.  It will set up ssh-related things and then run

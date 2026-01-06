@@ -1,5 +1,4 @@
-version: '2'
 services:
   barman:
-    image: tbeadle/barman:2.1
+    image: ghcr.io/holgerhuo/barman-docker:latest
     build: .
