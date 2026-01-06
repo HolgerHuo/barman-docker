@@ -1,7 +1,7 @@
 FROM debian:trixie
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates curl file
+	&& apt-get install -y --no-install-recommends ca-certificates curl
 
 # Install postgres clients so that barman can use the appropriate version when
 # using pg_basebackup.
@@ -16,6 +16,7 @@ RUN install -d /usr/share/postgresql-common/pgdg \
     && sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' > /etc/apt/sources.list.d/pgdg.list" \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends \
+	    file \
 		cron \
 		gcc \
 		libpq-dev \

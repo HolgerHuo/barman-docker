@@ -4,7 +4,7 @@ name: Build and Push to GitHub Container Registry
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    tags: [ "*" ]
+    tags: ["*"]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -38,16 +38,16 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-         # generate Docker tags based on the following events/attributes
-         tags: |
-           type=ref,event=branch
-           type=ref,event=tag
-           type=semver,pattern={{version}}
-           type=semver,pattern={{major}}.{{minor}}
-           type=semver,pattern={{major}}
-           type=sha
-           type=raw,value=latest,enable={{is_default_branch}}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Set up Docker Buildx
         id: buildx
