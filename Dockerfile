@@ -1,10 +1,7 @@
 FROM debian:trixie
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates curl gnupg2 gosu tini\
-	&& rm -rf /var/lib/apt/lists/* \
-    # verify that the binary works
-    && gosu nobody true
+	&& apt-get install -y --no-install-recommends ca-certificates curl
 
 # Install postgres clients so that barman can use the appropriate version when
 # using pg_basebackup.
@@ -13,10 +10,7 @@ RUN apt-get update \
 #   gcc: For building psycopg2
 #   libpq-dev: Needed to build/run psycopg2
 #   libpython-dev: For building psycopg2
-#   openssh-client: Needed to rsync basebackups from the database servers
 #   python: Needed to run barman
-#   rsync: Needed to rsync basebackups from the database servers
-#   gettext-base: envsubst
 RUN install -d /usr/share/postgresql-common/pgdg \
     && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' > /etc/apt/sources.list.d/pgdg.list" \
@@ -26,7 +20,6 @@ RUN install -d /usr/share/postgresql-common/pgdg \
 		gcc \
 		libpq-dev \
 		libpython3-dev \
-		openssh-client \
 		postgresql-client-9.5 \
 		postgresql-client-9.6 \
 		postgresql-client-10 \
@@ -39,54 +32,16 @@ RUN install -d /usr/share/postgresql-common/pgdg \
     	postgresql-client-17 \
 		postgresql-client-18 \
 		python3 \
-		rsync \
-        gettext-base \
-        procps \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& rm -f /etc/crontab /etc/cron.*/* \
-	&& sed -i 's/\(.*pam_loginuid.so\)/#\1/' /etc/pam.d/cron \
-    && mkdir -p /etc/barman/barman.d
+	&& sed -i 's/\(.*pam_loginuid.so\)/#\1/' /etc/pam.d/cron
 
-# Set up some defaults for file/directory locations used in entrypoint.sh.
-ENV \
-	BARMAN_VERSION=3.16.2 \
-	BARMAN_CRON_SRC=/private/cron.d \
-	BARMAN_DATA_DIR=/var/lib/barman \
-	BARMAN_LOG_DIR=/var/log/barman \
-	BARMAN_SSH_KEY_DIR=/private/ssh \
-    BARMAN_CRON_SCHEDULE="* * * * *" \
-    BARMAN_BACKUP_SCHEDULE="0 4 * * *" \
-    BARMAN_LOG_LEVEL=INFO \
-    DB_HOST=pg \
-    DB_PORT=5432 \
-    DB_SUPERUSER=postgres \
-    DB_SUPERUSER_PASSWORD=postgres \
-    DB_SUPERUSER_DATABASE=postgres \
-    DB_REPLICATION_USER=standby \
-    DB_REPLICATION_PASSWORD=standby \
-    DB_SLOT_NAME=barman \
-    DB_BACKUP_METHOD=postgres \
-    BARMAN_EXPORTER_SCHEDULE="*/5 * * * *" \
-    BARMAN_EXPORTER_LISTEN_ADDRESS="0.0.0.0" \
-    BARMAN_EXPORTER_LISTEN_PORT=9780 \
-    BARMAN_EXPORTER_CACHE_TIME=3600
-VOLUME ${BARMAN_DATA_DIR}
+RUN sh -c "curl -sSL https://bootstrap.pypa.io/get-pip.py | python3 - --break-system-packages" \
+	&& useradd --system --shell /bin/bash barman \
+	&& mkdir -p /etc/barman/barman.d \
+	&& echo "* * * * * barman /usr/local/bin/barman -q cron" >> /etc/cron.d/barman
 
-COPY install_barman.sh /tmp/
-RUN /tmp/install_barman.sh && rm /tmp/install_barman.sh
-COPY barman.conf.template /etc/barman.conf.template
-COPY pg.conf.template /etc/barman/barman.d/pg.conf.template
+RUN pip install barman==3.16.2 requests==2.32.5 --break-system-packages
 
-# Install barman exporter
-RUN pip install barman-exporter --break-system-packages && mkdir /node_exporter
-VOLUME /node_exporter
-
-# Install the entrypoint script.  It will set up ssh-related things and then run
-# the CMD which, by default, starts cron.  The 'barman -q cron' job will get
-# pg_receivexlog running.  Cron may also have jobs installed to run
-# 'barman backup' periodically.
-ENTRYPOINT ["tini", "--", "/entrypoint.sh"]
+WORKDIR /var/lib/barman
 CMD ["cron", "-L", "4",  "-f"]
-COPY entrypoint.sh /
-WORKDIR ${BARMAN_DATA_DIR}
-

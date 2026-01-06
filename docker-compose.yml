@@ -1,4 +1,0 @@
-services:
-  barman:
-    image: ghcr.io/holgerhuo/barman-docker:latest
-    build: .
