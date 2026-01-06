@@ -1,7 +1,7 @@
 FROM debian:trixie
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates curl
+	&& apt-get install -y --no-install-recommends ca-certificates curl file
 
 # Install postgres clients so that barman can use the appropriate version when
 # using pg_basebackup.
@@ -39,7 +39,7 @@ RUN install -d /usr/share/postgresql-common/pgdg \
 RUN sh -c "curl -sSL https://bootstrap.pypa.io/get-pip.py | python3 - --break-system-packages" \
 	&& useradd --system --shell /bin/bash barman \
 	&& mkdir -p /etc/barman/barman.d \
-	&& echo "* * * * * barman /usr/local/bin/barman -q cron --keep-descriptors" >> /etc/cron.d/barman
+	&& echo "* * * * * barman /usr/local/bin/barman cron --keep-descriptors" >> /etc/cron.d/barman
 
 RUN pip install barman==3.16.2 requests==2.32.5 --break-system-packages
 
