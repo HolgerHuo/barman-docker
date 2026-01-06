@@ -3,14 +3,6 @@ FROM debian:trixie
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends ca-certificates curl
 
-# Install postgres clients so that barman can use the appropriate version when
-# using pg_basebackup.
-# Install some other requirements as well.
-#   cron: For scheduling base backups
-#   gcc: For building psycopg2
-#   libpq-dev: Needed to build/run psycopg2
-#   libpython-dev: For building psycopg2
-#   python: Needed to run barman
 RUN install -d /usr/share/postgresql-common/pgdg \
     && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' > /etc/apt/sources.list.d/pgdg.list" \
@@ -37,8 +29,11 @@ RUN install -d /usr/share/postgresql-common/pgdg \
 	&& rm -f /etc/crontab /etc/cron.*/* \
 	&& sed -i 's/\(.*pam_loginuid.so\)/#\1/' /etc/pam.d/cron
 
+ARG UID=999
+ARG GID=999
+
 RUN sh -c "curl -sSL https://bootstrap.pypa.io/get-pip.py | python3 - --break-system-packages" \
-	&& useradd --system --shell /bin/bash -m -d /var/lib/barman barman \
+	&& useradd --system --shell /bin/bash -u ${UID} -g ${GID} -d /var/lib/barman barman \
 	&& mkdir -p /etc/barman/barman.d \
 	&& echo "* * * * * barman /usr/local/bin/barman -q cron" > /etc/cron.d/barman
 
